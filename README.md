@@ -1,2 +1,2 @@
 # draft-rnfd
-Fast border router crash detection in RPL
+RNFD: Fast border router crash detection in RPL
