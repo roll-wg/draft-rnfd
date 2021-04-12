@@ -1,0 +1,5 @@
+#!/bin/sh
+# Borrowed from draft-ietf-roll-entrollment-priority
+
+sed -n -e'/docname/s,.*draft-.*-\([0-9]*\).*,\1,p' $*
+
