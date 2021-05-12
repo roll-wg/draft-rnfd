@@ -4,7 +4,7 @@ coding: utf-8
 title: "RNFD: Fast border router crash detection in RPL"
 abbrev: RNFD
 docname: draft-iwanicki-roll-rnfd-01
-date: 2021-04-21
+date: 2021-05-12
 
 ipr: trust200902
 area: Internet
@@ -213,6 +213,7 @@ A Sentinel node is the DODAG root's neighbor that monitors its link with the roo
 The DODAG root thus normally has multiple Sentinels but being its neighbor need not imply being Sentinel.
 An Acceptor node is in turn a node that is not Sentinel.
 Acceptors thus mainly collect and propagate Sentinels' observations.
+More information on Sentinel selection can be found in {{mgmnt_roles_and_cfrc_lens}}.
 
 
 ## Protocol State Machine
@@ -274,7 +275,7 @@ Each node in RNFD maintains two CFRCs for a DODAG:
 - PositiveCFRC, counting Sentinels that have considered or still consider the root node as alive in the current DODAG Version,
 - NegativeCFRC, counting Sentinels that have considered or still consider the root node as dead in the current DODAG Version.
 
-PositiveCFRC is always greater than or equal to the NegativeCFRC in terms of the partial order of defined for the counters.
+PositiveCFRC is always greater than or equal to the NegativeCFRC in terms of the partial order defined for the counters.
 The difference between the value of PositiveCFRC and the value of NegativeCFRC is thus nonnegative and estimates the number of Sentinels that still consider the DODAG root node as alive.
 
 
@@ -315,7 +316,7 @@ The partial ordering of CFRCs implies that the result of compare(c1, c2) can be 
 
 - smaller, if c1 is ordered before c2 (i.e., c2 counts all nodes that c1 counts and at least one node that c1 does not count);
 - greater, if c1 is ordered after c2 (i.e., c1 counts all nodes that c2 counts and at least one node that c2 does not count);
-- equal, if c1 and c2 are the same (i.e., they count precisely the same nodes);
+- equal, if c1 and c2 are the same (i.e., they count the same nodes);
 - incomparable, otherwise.
 
 In particular, zero() is smaller than all other values and infinity() is greater than any other value.
@@ -438,7 +439,7 @@ Only nodes that are Sentinels take active part in detecting crashes of the DODAG
 
 The DODAG root monitoring SHOULD be based on both internal inputs, notably the values of CFRCs and LORS, and external inputs, such as triggers from RPL and other protocols.
 External input monitoring SHOULD be performed preferably in a reactive fashion, also independently of RPL, and at both data plane and control plane.
-In particular, it is RECOMMENDED that RNFD be directly notified of events relevant to the routing adjacency maintenance mechanisms on which RPL relies, such as layer 2 triggers {{RFC5184}} or the Neighbor Unreachability Detection {{RFC4861}} mechanism.
+In particular, it is RECOMMENDED that RNFD be directly notified of events relevant to the routing adjacency maintenance mechanisms on which RPL relies, such as Layer 2 triggers {{RFC5184}} or the Neighbor Unreachability Detection {{RFC4861}} mechanism.
 Only events concerning the DODAG root need be monitored to this end.
 For example, RNFD can conclude that there may be problems with the DODAG root if it observes a lack of multiple consecutive L2 acknowledgments for packets transmitted by the node via the link to the DODAG root.
 Internally, in turn, it is RECOMMENDED that RNFD take action whenever there is a change to its local CFRCs, so that a node can have a chance to participate in detecting potential problems even when normally it would not exchange packets over the link with the DODAG root during some period.
@@ -457,7 +458,7 @@ For consistency with RPL, when detecting potential problems with the DODAG root,
 More specifically, a node MUST switch its LORS from "UP" or "SUSPECTED DOWN" directly to "LOCALLY DOWN" if a neighbor entry for the DODAG root is removed from RPL's DODAG parent set or the neighbor ceases to be considered reachable via its link-local IPv6 address.
 
 Finally, while having its LORS already equal to "LOCALLY DOWN", a node may make an observation confirming that its link with the DODAG root is actually up.
-In such a case, it SHOULD set its LORS back to "UP" but MUST NOT do this until the previous conditions 2--4 necessary for a node to change its role from Acceptor to Sentinel all hold.
+In such a case, it SHOULD set its LORS back to "UP" but MUST NOT do this before the previous conditions 2--4 necessary for a node to change its role from Acceptor to Sentinel all hold.
 
 To appropriately account for the node's observations on the state of the DODAG root, the aforementioned LORS transitions are accompanied by changes to the node's local CFRCs as follows.
 Changes between "UP" and "SUSPECTED DOWN" do not affect any of the two CFRCs.
@@ -498,7 +499,7 @@ If the bit length of fields PosCFRC and NegCFRC is smaller than that of the node
 If the bit length of fields PosCFRC and NegCFRC is greater than that of the node's local PositiveCFRC and NegativeCFRC, then the node MUST extend the bit length of its local CFRCs to be equal to that in the option and set the CFRCs as follows:
 
 - If the node's LORS is "GLOBALLY DOWN", then both its local CFRCs MUST be set to infinity().
-- Otherwise, they both MUST be set to zero(), and the node MUST account for itself in such initialized CFRCs. More specifically, if the node is Sentinel, then it MUST add itself to its PositiveCFRC, as detailed previously. In addition, if its LORS is "LOCALLY DOWN", then it MUST also add itself to its NegativeCFRC, again, as explained previously. Finally, the node MUST perform merges of its local CFRCs and the ones received in the option (see {{rnfd_behavior_consensus}}) and MAY reset its Trickle timer.
+- Otherwise, they both MUST be set to zero(), and the node MUST account for itself in so initialized CFRCs. More specifically, if the node is Sentinel, then it MUST add itself to its PositiveCFRC, as detailed previously. In addition, if its LORS is "LOCALLY DOWN", then it MUST also add itself to its NegativeCFRC, again, as explained previously. Finally, the node MUST perform merges of its local CFRCs and the ones received in the option (see {{rnfd_behavior_consensus}}) and MAY reset its Trickle timer.
 
 In contrast, if the node is unable to extend its local CFRCs, for example, because it lacks resources, then it MUST stop participating in RNFD, that is, until it joins a new DODAG Version, it MUST NOT send the RNFD Option and MUST ignore this option in received messages.
 
@@ -512,7 +513,7 @@ To start with, the DODAG root MUST generate a new DODAG Version, thereby restart
 It MAY also generate a new DODAG Version if fraction value(NegativeCFRC)/value(PositiveCFRC) approaches RNFD_CONSENSUS_THRESHOLD, so as to avoid potential interruptions to routing.
 
 Furthermore, the DODAG root SHOULD either generate a new DODAG Version or increase the bit length of its CFRCs if saturated(PositiveCFRC) becomes TRUE.
-This is a self-regulation mechanism that helps adjust the CFRCs to a potentially large number of Sentinels (see {{manageability}}).
+This is a self-regulation mechanism that helps adjust the CFRCs to a potentially large number of Sentinels (see {{mgmnt_roles_and_cfrc_lens}}).
 
 In general, issuing a new DODAG Version effectively restarts RNFD.
 The DODAG root MAY thus perform this operation also in other situations.
@@ -522,14 +523,14 @@ The DODAG root MAY thus perform this operation also in other situations.
 
 In summary, RNFD interacts with RPL in the following manner:
 
-- While having its LORS equal to "GLOBALLY DOWN", RNFD prevents RPL from routing packets and advertising upward routes (see {{rnfd_behavior_consensus}}).
+- While having its LORS equal to "GLOBALLY DOWN", RNFD prevents RPL from routing packets and advertising upward routes in the corresponding DODAG (see {{rnfd_behavior_consensus}}).
 - In some scenarios, RNFD triggers RPL to issue a new DODAG Version (see {{rnfd_behavior_root}}).
 - Depending on the implementation, RNFD may cause RPL's DIO Trickle timer resets (see {{rnfd_behavior_consensus}} and {{rnfd_behavior_cfrc_size}}).
 - RNFD monitors events relevant to routing adjacency maintenance as well as those affecting RPL's DODAG parent set (see {{rnfd_behavior_roles}} and {{rnfd_behavior_detection}}).
 - Using RNFD entails embedding the RNFD Option into link-local RPL control messages (see {{msg_format}}).
 
 
-## Summary of RNFD's Constants
+## Summary of RNFD's Constants {#rnfd_behavior_constants}
 
 The following is a summary of RNFD's constants:
 
@@ -542,9 +543,12 @@ RNFD_CONSENSUS_THRESHOLD
 
 
 
-# Manageability Considerations {#manageability}
+# Manageability Considerations {#mgmnt}
 
 RNFD is largely self-managed, with the exception of node role assignment and the related CFRC size adjustment, for which only the aforementioned mechanisms are defined, so as to enable adopting deployment-specific policies.
+
+
+## Role Assignment and CFRC Size Adjustment {#mgmnt_roles_and_cfrc_lens}
 
 One approach to node role and CFRC size selection is to manually designate specific nodes as Sentinels in RNFD, assuming that they will have chances to satisfy the necessary conditions for attaining this role (see {{rnfd_behavior_roles}}), and fixing the CFRC bit length to accommodate these nodes.
 
@@ -559,6 +563,24 @@ Increasing the bit length can be done, for instance, by doubling it, respecting 
 In either of the solutions, Sentinel nodes SHOULD preferably be stable themselves and have stable links to the DODAG root.
 Otherwise, they may often exhibit LORS transitions between "UP" and "LOCALLY DOWN" or switches between Acceptor and Sentinel roles, which gradually saturates CFRCs.
 Although as a mitigation the number of such transitions and switches per node MAY be limited, having Sentinels stable SHOULD be preferred.
+
+
+## Virtual DODAG Roots {#mgmnt_virt_dodag_roots}
+
+RPL allows a DODAG to have a so-called virtual root, that is, a collection of nodes coordinating to act as a single root of the DODAG.
+The details of the coordination process are left open in the specification {{RFC6550}} but, from RNFD's perspective, two possible realizations are worth consideration:
+
+- Just a single (primary) node of the nodes comprising the virtual root acts as the actual root of the DODAG. Only when this node fails, does another (backup) node take over. As a result, at any time, at most one of the nodes comprising the virtual root is the actual root.
+- More than one of the nodes comprising the virtual root act as actual roots of the DODAG, all advertising the same Rank in the DODAG. When some of the nodes fail, the other nodes may or may not react in any specific way. In other words, at any time, more than one node can be the actual root.
+
+In the first realization, RNFD's operation is largely unaffected.
+The necessary conditions for a node to become Sentinel ({{rnfd_behavior_roles}}) guarantee that only the current primary root node is monitored by the protocol.
+This SHOULD be taken into account in the policies for node role assignment, CFRC size selection, and, possibly, the setting of the two thresholds ({{rnfd_behavior_constants}}).
+Moreover, when a new primary has been elected, to avoid polluting CFRCs with observations on the previous primary, it is RECOMMENDED to issue a new DODAG Version, especially if the new primary has different neighbors compared to the old one.
+
+In the second realization, the fact that the virtual root consists of multiple nodes is transparent to RNFD.
+Therefore, employing RNFD is such a setting can be beneficial only if the nodes comprising the virtual root may suffer from correlated crashes, for instance, due to global power outages.
+
 
 
 # Security Considerations {#security}
@@ -592,7 +614,7 @@ To represent the RNFD Option, IANA is requested to allocate the value TBD1 from 
 
 The authors would like to acknowledge Piotr Ciolkosz and Agnieszka Paszkowska.
 Agnieszka contributed to deeper understanding and formally proving various aspects of RPL's behavior upon an LBR crash.
-Piotr in turn developed a prototype implementation of RNFD to verify earlier performance claims.
+Piotr in turn developed a prototype implementation of RNFD dedicated for RPL to verify earlier performance claims.
 
 *TODO* More likely to follow.
 
