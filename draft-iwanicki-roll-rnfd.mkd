@@ -4,7 +4,7 @@ coding: utf-8
 title: "RNFD: Fast border router crash detection in RPL"
 abbrev: RNFD
 docname: draft-iwanicki-roll-rnfd-01
-date: 2021-05-12
+date: 2021-05-19
 
 ipr: trust200902
 area: Internet
@@ -359,7 +359,7 @@ Option Type
 : TBD1
 
 Option Length
-: 8-bit unsigned integer. Denotes the length of the option in octets excluding the Option Type and Option Length fields. Its value MUST be even.
+: 8-bit unsigned integer. Denotes the length of the option in octets excluding the Option Type and Option Length fields. Its value MUST be even. A value of 0 denotes that RNFD is disabled in the current DODAG Version.
 
 PosCFRC, NegCFRC
 : Two variable-length, octet-aligned bit arrays carrying the sender's PositiveCFRC and NegativeCFRC, respectively.
@@ -412,7 +412,7 @@ These interactions are described next and can be realized, for instance, by mean
 
 ## Joining a DODAG Version and Changing the RNFD Role {#rnfd_behavior_roles}
 
-Whenever RPL running at a node joins a DODAG Version, RNFD MUST assume for the node the role of Acceptor.
+Whenever RPL running at a node joins a DODAG Version, RNFD---if active---MUST assume for the node the role of Acceptor.
 Accordingly, it MUST set its LORS to "UP" and its PositiveCFRC and NegativeCFRC to zero().
 
 The role MAY then change between Acceptor and Sentinel at any time.
@@ -486,24 +486,6 @@ In either case, a node MUST reset its Trickle timer when it changes its LORS to 
 Likewise, a node SHOULD reset its Trickle timer when any of its local CFRCs changes significantly.
 
 
-## Processing CFRCs of Incompatible Lengths {#rnfd_behavior_cfrc_size}
-
-The merge() and compare() operations on CFRCs require both arguments to be compatible, that is, to have the same bit length.
-However, the processing rules for the RNFD Option (see {{msg_format}}) do not require this, which aims to enable dynamic adjustments of CFRCs.
-Consequently, a node MUST be prepared to receive the RNFD Option with fields PosCFRC and NegCFRC of a different bit length than the node's own PositiveCFRC and NegativeCFRC and MUST react as follows.
-
-If the bit length of fields PosCFRC and NegCFRC is the same as that of the node's local PositiveCFRC and NegativeCFRC, then the node MUST perform the merges, as detailed previously (see {{rnfd_behavior_consensus}}).
-
-If the bit length of fields PosCFRC and NegCFRC is smaller than that of the node's local PositiveCFRC and NegativeCFRC, then the node MUST ignore the option and MAY reset its Trickle timer.
-
-If the bit length of fields PosCFRC and NegCFRC is greater than that of the node's local PositiveCFRC and NegativeCFRC, then the node MUST extend the bit length of its local CFRCs to be equal to that in the option and set the CFRCs as follows:
-
-- If the node's LORS is "GLOBALLY DOWN", then both its local CFRCs MUST be set to infinity().
-- Otherwise, they both MUST be set to zero(), and the node MUST account for itself in so initialized CFRCs. More specifically, if the node is Sentinel, then it MUST add itself to its PositiveCFRC, as detailed previously. In addition, if its LORS is "LOCALLY DOWN", then it MUST also add itself to its NegativeCFRC, again, as explained previously. Finally, the node MUST perform merges of its local CFRCs and the ones received in the option (see {{rnfd_behavior_consensus}}) and MAY reset its Trickle timer.
-
-In contrast, if the node is unable to extend its local CFRCs, for example, because it lacks resources, then it MUST stop participating in RNFD, that is, until it joins a new DODAG Version, it MUST NOT send the RNFD Option and MUST ignore this option in received messages.
-
-
 ## DODAG Root's Behavior {#rnfd_behavior_root}
 
 The DODAG root node MUST assume the role of Acceptor in RNFD and MUST NOT ever switch this role.
@@ -519,13 +501,53 @@ In general, issuing a new DODAG Version effectively restarts RNFD.
 The DODAG root MAY thus perform this operation also in other situations.
 
 
+## Activating and Deactivating the Protocol on Demand {#rnfd_behavior_deactivation}
+
+RNFD CAN be activated and deactivated on demand, once per DODAG Version.
+The particular policies for activating and deactivating the protocol are outside the scope of this document.
+However, the activation and deactivation SHOULD be done at the DODAG root node; other nodes MUST comply.
+
+More specifically, when a non-root node joins a DODAG Version, RNFD at the node is initially inactive.
+The node MUST NOT activate the protocol unless it receives for this DODAG Version a valid RNFD Option containing some CFRCs, that is, having its Option Length field positive.
+In particular, if the option accompanies the message that causes the node to join the DODAG Version, the protocol SHOULD be active from the moment of the joining.
+RNFD then remains active at the node until it is explicitly deactivated or the node joins a new DODAG Version.
+An explicit deactivation MUST take place when the node receives an RNFD Option for the DODAG Version with no CFRCs, that is, having its Option Length field equal to zero.
+When explicitly deactivated, RNFD MUST NOT be reactivated unless the node joins a new DODAG Version.
+In particular, when the first RNFD Option received by the node has its Option Length field equal to zero, the protocol MUST remain deactivated for the entire time the node belongs to the current DODAG Version.
+
+When RNFD at a node is initially inactive for a DODAG Version, the node MUST NOT attach any RNFD Option to the messages it sends (in particular, because it may not know the desired CFRC length---see {{rnfd_behavior_cfrc_size}}).
+When the protocol has been explicitly deactivated, the node MAY also decide not to attach the option to its outgoing messages.
+However, it is RECOMMENDED that it sends sufficiently many messages with the option to the link-local all-RPL-nodes multicast IPv6 address to allow its neighbors to learn that RNFD has been deactivated in the current DODAG version.
+In particular, it MAY reset its Trickle timer to this end but also MAY use some reactive mechanisms, for example, replying with a unicast DIO or DIS containing the RNFD Option with no CFRCs to a message from a neighbor that contains the option with some CFRCs, as such a neighbor appears not to have learned about the deactivation of RNFD.
+
+
+## Processing CFRCs of Incompatible Lengths {#rnfd_behavior_cfrc_size}
+
+The merge() and compare() operations on CFRCs require both arguments to be compatible, that is, to have the same bit length.
+However, the processing rules for the RNFD Option (see {{msg_format}}) do not necessitate this.
+This fact is made use of not only in the mechanisms for activating and deactivating the protocol (see {{rnfd_behavior_deactivation}}), but also in mechanisms for dynamic adjustments of CFRCs, which aim to enable deployment-specific policies (see {{mgmnt_roles_and_cfrc_lens}}).
+A node thus MUST be prepared to receive the RNFD Option with fields PosCFRC and NegCFRC of a different bit length than the node's own PositiveCFRC and NegativeCFRC.
+Assuming that it has RNFD active and that fields PosCFRC and NegCFRC in the option have a positive length, the node MUST react as follows.
+
+If the bit length of fields PosCFRC and NegCFRC is the same as that of the node's local PositiveCFRC and NegativeCFRC, then the node MUST perform the merges, as detailed previously (see {{rnfd_behavior_consensus}}).
+
+If the bit length of fields PosCFRC and NegCFRC is smaller than that of the node's local PositiveCFRC and NegativeCFRC, then the node MUST ignore the option and MAY reset its Trickle timer.
+
+If the bit length of fields PosCFRC and NegCFRC is greater than that of the node's local PositiveCFRC and NegativeCFRC, then the node MUST extend the bit length of its local CFRCs to be equal to that in the option and set the CFRCs as follows:
+
+- If the node's LORS is "GLOBALLY DOWN", then both its local CFRCs MUST be set to infinity().
+- Otherwise, they both MUST be set to zero(), and the node MUST account for itself in so initialized CFRCs. More specifically, if the node is Sentinel, then it MUST add itself to its PositiveCFRC, as detailed previously. In addition, if its LORS is "LOCALLY DOWN", then it MUST also add itself to its NegativeCFRC, again, as explained previously. Finally, the node MUST perform merges of its local CFRCs and the ones received in the option (see {{rnfd_behavior_consensus}}) and MAY reset its Trickle timer.
+
+In contrast, if the node is unable to extend its local CFRCs, for example, because it lacks resources, then it MUST stop participating in RNFD, that is, until it joins a new DODAG Version, it MUST NOT send the RNFD Option and MUST ignore this option in received messages.
+
+
 ## Summary of RNFD's Interactions with RPL
 
 In summary, RNFD interacts with RPL in the following manner:
 
 - While having its LORS equal to "GLOBALLY DOWN", RNFD prevents RPL from routing packets and advertising upward routes in the corresponding DODAG (see {{rnfd_behavior_consensus}}).
 - In some scenarios, RNFD triggers RPL to issue a new DODAG Version (see {{rnfd_behavior_root}}).
-- Depending on the implementation, RNFD may cause RPL's DIO Trickle timer resets (see {{rnfd_behavior_consensus}} and {{rnfd_behavior_cfrc_size}}).
+- Depending on the implementation, RNFD may cause RPL's DIO Trickle timer resets (see {{rnfd_behavior_consensus}}, {{rnfd_behavior_deactivation}}, and {{rnfd_behavior_cfrc_size}}).
 - RNFD monitors events relevant to routing adjacency maintenance as well as those affecting RPL's DODAG parent set (see {{rnfd_behavior_roles}} and {{rnfd_behavior_detection}}).
 - Using RNFD entails embedding the RNFD Option into link-local RPL control messages (see {{msg_format}}).
 
@@ -540,12 +562,14 @@ RNFD_SUSPICION_GROWTH_THRESHOLD
 RNFD_CONSENSUS_THRESHOLD
 : A threshold concerning the value of fraction value(NegativeCFRC)/value(PositiveCFRC). If the value at a Sentinel or Acceptor node reaches the threshold, then the node's LORS is set to "GLOBALLY DOWN", which implies that consensus has been reached on the DODAG root node being down  (see {{rnfd_behavior_consensus}}). The default value of the threshold is 0.51. The higher the value the longer the detection period but the lower the risk of false positives.
 
+The means of configuring the constants at individual nodes are outside the scope of this document.
 
 
 
 # Manageability Considerations {#mgmnt}
 
-RNFD is largely self-managed, with the exception of node role assignment and the related CFRC size adjustment, for which only the aforementioned mechanisms are defined, so as to enable adopting deployment-specific policies.
+RNFD is largely self-managed, with the exception of protocol activation and deactivation, as well as node role assignment and the related CFRC size adjustment, for which only the aforementioned mechanisms are defined, so as to enable adopting deployment-specific policies.
+This section outlines some of the possible policies.
 
 
 ## Role Assignment and CFRC Size Adjustment {#mgmnt_roles_and_cfrc_lens}
