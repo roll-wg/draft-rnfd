@@ -1,5 +1,5 @@
 # Adapted from draft-ietf-roll-entrollment-priority
-DRAFT:=draft-iwanicki-roll-rnfd
+DRAFT:=draft-ietf-roll-rnfd
 VERSION:=$(shell ./getver ${DRAFT}.mkd )
 
 ${DRAFT}-${VERSION}.txt: ${DRAFT}.txt

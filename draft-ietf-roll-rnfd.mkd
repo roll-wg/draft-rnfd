@@ -3,8 +3,8 @@ coding: utf-8
 
 title: "RNFD: Fast border router crash detection in RPL"
 abbrev: RNFD
-docname: draft-iwanicki-roll-rnfd-01
-date: 2021-11-09
+docname: draft-ietf-roll-rnfd-00
+date: 2022-03-01
 
 ipr: trust200902
 area: Internet
