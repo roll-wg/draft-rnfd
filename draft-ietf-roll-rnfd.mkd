@@ -640,7 +640,7 @@ Those that pass undetected, in turn, are likely not to have major negative conse
 
 # IANA Considerations
 
-To represent the RNFD Option, IANA is requested to allocate the value TBD1 from the ["RPL Control Message Options" sub-registry](https://www.iana.org/assignments/rpl/rpl.xhtml#control-message-options) of the "Routing Protocol for Low Power and Lossy Networks (RPL)" registry.
+To represent the RNFD Option, IANA is requested to allocate the value TBD1 from the ["RPL Control Message Options" registry](https://www.iana.org/assignments/rpl/rpl.xhtml#control-message-options) of the "Routing Protocol for Low Power and Lossy Networks (RPL)" registry group.
 
 
 
