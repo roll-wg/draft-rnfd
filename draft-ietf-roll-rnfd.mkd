@@ -3,8 +3,8 @@ coding: utf-8
 
 title: "RNFD: Fast border router crash detection in RPL"
 abbrev: RNFD
-docname: draft-ietf-roll-rnfd-01
-date: 2022-10-12
+docname: draft-ietf-roll-rnfd-02
+date: 2023-09-18
 
 ipr: trust200902
 area: Internet
@@ -513,7 +513,7 @@ The DODAG root MAY thus perform this operation also in other situations.
 
 ## Activating and Deactivating the Protocol on Demand {#rnfd_behavior_deactivation}
 
-RNFD CAN be activated and deactivated on demand, once per DODAG Version.
+RNFD can be activated and deactivated on demand, once per DODAG Version.
 The particular policies for activating and deactivating the protocol are outside the scope of this document.
 However, the activation and deactivation SHOULD be done at the DODAG root node; other nodes MUST comply.
 
