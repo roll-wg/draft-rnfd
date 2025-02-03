@@ -3,8 +3,8 @@ coding: utf-8
 
 title: "RNFD: Fast border router crash detection in RPL"
 abbrev: RNFD
-docname: draft-ietf-roll-rnfd-04
-date: 2024-09-08
+docname: draft-ietf-roll-rnfd-05
+date: 2025-02-03
 
 ipr: trust200902
 area: Internet
@@ -435,7 +435,7 @@ These interactions are described next and can be realized, for instance, by mean
 Whenever RPL running at a node joins a DODAG Version, RNFD --- if active --- MUST assume for the node the role of Acceptor.
 Accordingly, it MUST set its LORS to "UP" and its PositiveCFRC and NegativeCFRC to zero().
 
-The role MAY then change between Acceptor and Sentinel at any time.
+The role may then change between Acceptor and Sentinel at any time.
 However, while a switch from Sentinel to Acceptor has no preconditions, for a switch from Acceptor to Sentinel to be possible, *all* of the following conditions MUST hold:
 
 1. LORS is "UP";
@@ -443,7 +443,7 @@ However, while a switch from Sentinel to Acceptor has no preconditions, for a sw
 3. a neighbor entry for the DODAG root is present in RPL's DODAG parent set;
 4. the neighbor is considered reachable via its link-local IPv6 address.
 
-A role change also REQUIRES appropriate updates to LORS and CFRCs, so that the node is properly accounted for.
+A role change also requires appropriate updates to LORS and CFRCs, so that the node is properly accounted for.
 More specifically, when changing its role from Acceptor to Sentinel, the node MUST add itself to its PositiveCFRC as follows.
 It MUST generate a new CFRC value, selfc = self(), and MUST replace its PositiveCFRC, denoted oldpc, with newpc = merge(oldpc, selfc).
 In contrast, the effects of a switch from Sentinel to Acceptor vary depending on the node's value of LORS before the switch:
@@ -484,7 +484,7 @@ In such a case, it SHOULD set its LORS back to "UP" but MUST NOT do this before 
 To appropriately account for the node's observations on the state of the DODAG root, the aforementioned LORS transitions are accompanied by changes to the node's local CFRCs as follows.
 Transitions between "UP" and "SUSPECTED DOWN" do not affect any of the two CFRCs.
 During a switch from "UP" or "SUSPECTED DOWN" to "LOCALLY DOWN", in turn, the node MUST add itself to its NegativeCFRC, as explained previously.
-By symmetry, a transition from "LOCALLY DOWN" to "UP" REQUIRES the node to add itself to its PositiveCFRC, again, as explained previously.
+By symmetry, if there is a transition from "LOCALLY DOWN" to "UP", the node MUST add itself to its PositiveCFRC, again, as explained previously.
 
 Such changes to a node's local CFRCs, if performed repeatedly due to incorrect decisions regarding the status of the node's link with the DODAG root, may lead to those CFRCs becoming saturated.
 An implementation SHOULD thus try to minimize false-positive transitions from "UP" and "SUSPECTED DOWN" to "LOCALLY DOWN".
@@ -675,6 +675,4 @@ To represent the RNFD Option, IANA is requested to allocate the value TBD1 from 
 The authors would like to acknowledge Piotr Ciolkosz and Agnieszka Paszkowska.
 Agnieszka contributed to deeper understanding and formally proving various aspects of RPL's behavior upon an LBR crash.
 Piotr in turn developed a prototype implementation of RNFD dedicated for RPL to verify earlier performance claims.
-
-*TODO* More likely to follow.
 
