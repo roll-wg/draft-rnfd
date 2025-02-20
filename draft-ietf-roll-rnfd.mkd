@@ -3,8 +3,8 @@ coding: utf-8
 
 title: "RNFD: Fast border router crash detection in RPL"
 abbrev: RNFD
-docname: draft-ietf-roll-rnfd-05
-date: 2025-02-03
+docname: draft-ietf-roll-rnfd-06
+date: 2025-02-20
 
 ipr: trust200902
 area: Internet
@@ -290,6 +290,7 @@ Upon reception of such an option from its neighbor, a node merges the received c
 The merging operation is idempotent, commutative, and associative.
 Moreover, all possible counter values are partially ordered.
 This enables ensuring eventual consistency of the counters across all nodes, irrespective of the particular sequence of merges, shape of the DODAG, or general network topology.
+In effect, as long as the network is connected, all nodes will be able to arrive at the same conclusion regarding the DODAG root, in particular, even when no two Sentinels have a direct link with each other.
 
 Each node in RNFD maintains two CFRCs for a DODAG:
 
