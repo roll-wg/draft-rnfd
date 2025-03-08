@@ -3,8 +3,8 @@ coding: utf-8
 
 title: "RNFD: Fast border router crash detection in RPL"
 abbrev: RNFD
-docname: draft-ietf-roll-rnfd-06
-date: 2025-02-20
+docname: draft-ietf-roll-rnfd-07
+date: 2025-03-08
 
 ipr: trust200902
 area: Internet
@@ -104,9 +104,9 @@ informative:
 
 --- abstract
 
-By and large, a correct operation of a RPL network requires border routers to be up.
-In many applications, it is beneficial for the nodes to detect a crash of a border router as soon as possible to trigger fallback actions.
-This document describes RNFD, an extension to RPL that expedites border router failure detection, even by an order of magnitude, by having nodes collaboratively monitor the status of a given border router.
+By and large, a correct operation of a network running RPL (the IPv6 routing protocol for low-power and lossy networks) requires border routers to be up.
+In many applications, it is beneficial for the nodes to detect a failure of a border router as soon as possible to trigger fallback actions.
+This document specifies RNFD (the root node failure detector), an extension to RPL that expedites border router crash detection by having nodes collaboratively monitor the status of a given border router.
 The extension introduces an additional state at each node, a new type of RPL Control Message Options for synchronizing this state among different nodes, and the coordination algorithm itself.
 
 --- middle
@@ -121,7 +121,7 @@ Therefore, a significant challenge that a routing protocol for LLNs has to addre
 One of the main design principles adopted in RPL to minimize node resource consumption is delegating much of the responsibility for routing to LLN border routers (LBRs).
 A network is organized into destination-oriented directed acyclic graphs (DODAGs), each corresponding to an LBR and having all its paths terminate at the LBR.
 To this end, every node is dynamically assigned a rank representing its distance, measured in some metric, to a given LBR, with the LBR having the minimal rank, which reflects its role as the DODAG root.
-The ranks allow each non-LBR node to select from among its neighbors (i.e., nodes to which the node has links) those ones that are closer to the LBR than the node itself: the node's parents in the graph.
+The ranks allow each non-LBR node to select from among its neighbors (i.e., nodes to which the node has links) those that are closer to the LBR than the node itself: the node's parents in the graph.
 The resulting DODAG paths, consisting of the node-parent links, are utilized for routing packets upward: to the LBR and outside the LLN.
 They are also used by nodes to periodically report their connectivity upward to the LBR, which allows in turn for directing packets downward, from the LBR to these nodes, for instance, by means of source routing {{RFC6554}}.
 All in all, not only do LBRs participate in routing but also drive the process of DODAG construction and maintenance underlying the protocol.
@@ -133,7 +133,7 @@ This, however, also makes them prone to failures, especially since in large depl
 
 ## Effects of LBR Crashes
 
-When an LBR crashes, the nodes in its DODAG lose the ability to communicate with other Internet hosts.
+When an LBR crashes or, more generally, fails in a way that prevents other nodes in its DODAG from communicating with it, the nodes also lose the ability to communicate with other Internet hosts.
 In addition, a significant fraction of DODAG paths interconnecting the nodes become invalid, as they pass through the dead LBR.
 The others also degenerate as a result of DODAG repair attempts, which are bound to fail.
 In effect, routing inside the DODAG also becomes largely impossible.
@@ -177,7 +177,7 @@ In any case, the principles also guarantee that RNFD can be deactivated at any t
 
 Given the consequences of LBR failures, if possible, it is also worth considering other solutions to the problem.
 More specifically, power outages can be alleviated by provisioning redundant power sources or emergency batteries.
-Likewise, RPL's so-called virtual DODAG roots can help tolerating some failures of individual LBRs.
+Likewise, RPL's so-called virtual DODAG roots can help tolerate some failures of individual LBRs.
 
 As mentioned previously, RNFD has been designed to be largely independent of those solutions, that is, rather than aiming to be their replacement, it can complement them.
 In particular, the operation of RNFD with different variants of virtual DODAG roots is covered in {{mgmnt_virt_dodag_roots}}.
@@ -228,9 +228,9 @@ Conflict-Free Replicated Counter (CFRC)
 As mentioned previously, LBRs are DODAG roots in RPL, and hence a crash of an LBR is global in that it affects all nodes in the corresponding DODAG.
 Therefore, each node running RNFD for a given DODAG explicitly tracks the DODAG root's current condition, which is referred to as Locally Observed DODAG Root's State (LORS), and synchronizes its local knowledge with other nodes.
 
-Since monitoring the condition of the DODAG root is performed by tracking the status of its links (i.e., whether they are up or down), it must be done by the root's neighbors; other nodes must accept their observations.
+Since monitoring the condition of the DODAG root is performed by tracking the status of its links (i.e., whether they are up or down), it can only be done by the root's neighbors; other nodes must accept their observations.
 Consequently, depending on their roles, non-root nodes are divided in RNFD into two disjoint groups: Sentinels and Acceptors.
-A Sentinel node is the DODAG root's neighbor that monitors its link with the root.
+A Sentinel node is a DODAG root's neighbor that monitors its link with the root.
 The DODAG root thus normally has multiple Sentinels but being its neighbor need not imply being Sentinel.
 An Acceptor node is in turn a node that is not Sentinel.
 Acceptors thus mainly collect and propagate Sentinels' observations.
@@ -472,11 +472,11 @@ Whenever having its LORS set to "UP" RNFD concludes --- based on either external
 The "SUSPECTED DOWN" value of LORS is temporary: its aim is to give RNFD an additional opportunity to verify whether the link with the DODAG root is indeed down.
 Depending on the outcome of such verification, RNFD MUST set its LORS to either "UP", if the link has been confirmed not to be down, or "LOCALLY DOWN", otherwise.
 The verification can be performed, for example, by transmitting RPL DIS or ICMPv6 Echo Request messages to the DODAG root's link-local IPv6 address and expecting replies confirming that the root is up and reachable through the link.
-Care SHOULD be taken not to overload the DODAG root with traffic due to simultaneous probes, for instance, random backoffs can be employed to this end.
+Care should be taken not to overload the DODAG root with traffic due to simultaneous probes, for instance, random backoffs can be employed to this end.
 It is RECOMMENDED that the "SUSPECTED DOWN" value of LORS is attained and verification takes place if RNFD's conclusion on the state of the DODAG root is based only on indirect observations, for example, the aforementioned growth of the CFRC values.
 In contrast, for direct observations, such as missing L2 acknowledgments, the verification MAY be skipped, with the node's LORS effectively changing from "UP" directly to "LOCALLY DOWN".
 
-For consistency with RPL, when detecting potential problems with the DODAG root, RNFD also MUST make use of RPL's independent knowledge.
+For consistency with RPL, when detecting potential problems with the DODAG root, RNFD also must make use of RPL's independent knowledge.
 More specifically, a node MUST switch its LORS from "UP" or "SUSPECTED DOWN" directly to "LOCALLY DOWN" if a neighbor entry for the DODAG root is removed from RPL's DODAG parent set or the neighbor ceases to be considered reachable via its link-local IPv6 address.
 
 Finally, while having its LORS already equal to "LOCALLY DOWN", a node may make an observation confirming that its link with the DODAG root is actually up.
@@ -488,7 +488,7 @@ During a switch from "UP" or "SUSPECTED DOWN" to "LOCALLY DOWN", in turn, the no
 By symmetry, if there is a transition from "LOCALLY DOWN" to "UP", the node MUST add itself to its PositiveCFRC, again, as explained previously.
 
 Such changes to a node's local CFRCs, if performed repeatedly due to incorrect decisions regarding the status of the node's link with the DODAG root, may lead to those CFRCs becoming saturated.
-An implementation SHOULD thus try to minimize false-positive transitions from "UP" and "SUSPECTED DOWN" to "LOCALLY DOWN".
+An implementation should thus try to minimize false-positive transitions from "UP" and "SUSPECTED DOWN" to "LOCALLY DOWN".
 The exact approach depends on the specific solutions employed for assessing the state of a link.
 For instance, one can utilize additional mechanisms for increasing the confidence of individual decisions, such as during the aforementioned verification in the "SUSPECTED DOWN" state, or can limit the number of transitions per node, possibly in an adaptive fashion.
 
@@ -508,6 +508,7 @@ With this value of LORS, RNFD at the node MUST also prevent RPL from having any 
 Since the RNFD Option is embedded, among others, in RPL DIO control messages, updates to a node's CFRCs may affect the sending schedule of these messages, which is driven by the DIO Trickle timer {{RFC6206}}.
 It is RECOMMENDED to use for RNFD a dedicated Trickle timer, different from RPL's original DIO Trickle timer.
 In such a setting, whenever the dedicated timer fires and no DIO message containing the RNFD Option has been sent to the link-local all-RPL-nodes multicast IPv6 address since the previous firing, the node sends a DIO message containing the RNFD Option to the address.
+The minimal and maximal interval sizes of the dedicated timer SHOULD not be smaller than those of RPL's original DIO Trickle timer.
 In contrast, in the absence of the dedicated Trickle timer for RNFD, an implementation SHOULD ensure that the RNFD Option is present in multicast DIO messages sufficiently often to quickly propagate changes to the node's CFRCs, and notably as soon as possible after a reset of the timer triggered by RNFD.
 In the remainder of this document, we will refer to the Trickle timer utilized by RNFD --- either the dedicated one or RPL's original one, depending on the implementation --- simply as "Trickle timer".
 In particular, a node MUST reset its Trickle timer when it changes its LORS to "GLOBALLY DOWN", so that information about the detected crash of the DODAG root is disseminated in the DODAG fast.
@@ -533,7 +534,7 @@ The DODAG root MAY thus perform this operation also in other situations.
 
 RNFD can be activated and deactivated on demand, once per DODAG Version.
 The particular policies for activating and deactivating the protocol are outside the scope of this document.
-However, the activation and deactivation SHOULD be done at the DODAG root node; other nodes MUST comply.
+However, the activation and deactivation MUST be done at the DODAG root node; other nodes MUST comply.
 
 More specifically, when a non-root node joins a DODAG Version, RNFD at the node is initially inactive.
 The node MUST NOT activate the protocol unless it receives for this DODAG Version a valid RNFD Option containing some CFRCs, that is, having its Option Length field positive.
@@ -554,7 +555,7 @@ In particular, it MAY reset its Trickle timer to this end but also MAY use some 
 The merge() and compare() operations on CFRCs require both arguments to be compatible, that is, to have the same bit length.
 However, the processing rules for the RNFD Option (see {{msg_format}}) do not necessitate this.
 This fact is made use of not only in the mechanisms for activating and deactivating the protocol (see {{rnfd_behavior_deactivation}}), but also in mechanisms for dynamic adjustments of CFRCs, which aim to enable deployment-specific policies (see {{mgmnt_roles_and_cfrc_lens}}).
-A node thus MUST be prepared to receive the RNFD Option with fields PosCFRC and NegCFRC of a different bit length than the node's own PositiveCFRC and NegativeCFRC.
+A node thus must be prepared to receive the RNFD Option with fields PosCFRC and NegCFRC of a different bit length than the node's own PositiveCFRC and NegativeCFRC.
 Assuming that it has RNFD active and that fields PosCFRC and NegCFRC in the option have a positive length, the node MUST react as follows.
 
 If the bit length of fields PosCFRC and NegCFRC is the same as that of the node's local PositiveCFRC and NegativeCFRC, then the node MUST perform the merges, as detailed previously (see {{rnfd_behavior_consensus}}).
@@ -606,7 +607,7 @@ The means of configuring the constants at individual nodes are outside the scope
 # Manageability Considerations {#mgmnt}
 
 RNFD is largely self-managed, with the exception of protocol activation and deactivation, as well as node role assignment and the related CFRC size adjustment, for which only the aforementioned mechanisms are defined, so as to enable adopting deployment-specific policies.
-This section outlines some of the possible policies.
+This section discusses the manageability issues.
 
 
 ## Role Assignment and CFRC Size Adjustment {#mgmnt_roles_and_cfrc_lens}
@@ -621,7 +622,7 @@ Another solution is to increase, potentially multiple times the bit length of th
 In this way, again, a sufficient bit length can be dynamically discovered or the root can conclude that a given bit length is excessive for (some) nodes and resort to the previous solution.
 Increasing the bit length can be done, for instance, by doubling it, respecting the condition that it has to be a prime number (see {{msg_format}}).
 
-In either of the solutions, Sentinel nodes SHOULD preferably be stable themselves and have stable links to the DODAG root.
+In either of the solutions, Sentinel nodes should preferably be stable themselves and have stable links to the DODAG root.
 Otherwise, they may often exhibit LORS transitions between "UP" and "LOCALLY DOWN" or switches between Acceptor and Sentinel roles, which gradually saturates CFRCs.
 Although as a mitigation the number of such transitions and switches per node MAY be limited, having Sentinels stable SHOULD be preferred.
 
@@ -637,10 +638,26 @@ The details of the coordination process are left open in the specification {{RFC
 In the first realization, RNFD's operation is largely unaffected.
 The necessary conditions for a node to become Sentinel ({{rnfd_behavior_roles}}) guarantee that only the current primary root node is monitored by the protocol.
 This SHOULD be taken into account in the policies for node role assignment, CFRC size selection, and, possibly, the setting of the two thresholds ({{rnfd_behavior_constants}}).
-Moreover, when a new primary has been elected, to avoid polluting CFRCs with observations on the previous primary, it is RECOMMENDED to issue a new DODAG Version, especially if the new primary has different neighbors compared to the old one.
+Moreover, when a new primary has been elected, to avoid polluting CFRCs with observations on the previous primary, a new DODAG Version MUST be issued.
 
 In the second realization, the fact that the virtual root consists of multiple nodes is transparent to RNFD.
 Therefore, employing RNFD is such a setting can be beneficial only if the nodes comprising the virtual root may suffer from correlated crashes, for instance, due to global power outages.
+
+
+## Monitoring {#mgmnt_monitoring}
+
+For monitoring the operation of RNFD, its implementation SHOULD provide the following information about a node:
+
+- whether the protocol is active,
+- whether LORS is "GLOBALLY DOWN",
+
+accompanied by the recommended monitoring parameters provided by RPL itself {{RFC6550}}, notably the DODAG Version number and the Rank.
+To offer even finer-grained visibility into RNFD's state at the node, the implementation MAY in addition provide:
+
+- the assigned role (i.e., Sentinel or Acceptor),
+- the exact value of LORS  (i.e., "UP", "SUSPECTED DOWN", "LOCALLY DOWN", or "GLOBALLY DOWN"),
+- the two CFRCs (i.e., PositiveCFRC and NegativeCFRC),
+- the constants listed in {{rnfd_behavior_constants}}.
 
 
 
